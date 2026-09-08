@@ -14,12 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Cash Rush projec
+      - name: Extract Cash Rush project
         run: |
-            mkdir extracted
-            unzip -q Cash_Rush_v2.1.2_ADS_FIXED.zip -d extracted
-            echo "Extracted files:"
-            find extracted -maxdepth 2 -type f | head -50
+          mkdir -p extracted
+          ZIP_FILE=$(find . -maxdepth 2 -type f -name '*.zip' | head -1)
+          echo "Using ZIP: $ZIP_FILE"
+          unzip -q "$ZIP_FILE" -d extracted
+          echo "Extracted:"
+          find extracted -maxdepth 3 -type f | head -80
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -34,17 +36,32 @@ jobs:
         run: |
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10.2'
+      - name: Fix BuildConfig and build APK
+        run: |
+          SETTINGS_FILE=$(find extracted -type f \( -name 'settings.gradle' -o -name 'settings.gradle.kts' \) | head -1)
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
 
-      - name: Build APK
-        working-directory: extracted/Cash_Rush_Monetized_v2_1
-        run: gradle assembleDebug --no-daemon
+          echo "Project directory: $PROJECT_DIR"
+
+          APP_GRADLE="$PROJECT_DIR/app/build.gradle"
+
+          if [ -f "$APP_GRADLE" ]; then
+            echo "Enabling BuildConfig..."
+            sed -i '/^[[:space:]]*android[[:space:]]*{/a\
+              buildFeatures {\
+                buildConfig true\
+              }' "$APP_GRADLE"
+          else
+            echo "ERROR: app/build.gradle not found"
+            exit 1
+          fi
+
+          echo "Building APK..."
+          cd "$PROJECT_DIR"
+          gradle :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Cash-Rush-APK
-          path: extracted/Cash_Rush_Monetized_v2_1/app/build/outputs/apk/debug/*.apk
+          name: Cash-Rush-v2.1.2-debug-test-ads
+          path: '**/app/build/outputs/apk/debug/app-debug.apk'
