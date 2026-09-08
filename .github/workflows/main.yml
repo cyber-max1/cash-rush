@@ -1,4 +1,4 @@
-name: Build Cash Rush APK
+name: Build Cash Rush RELEASE AAB
 
 on:
   push:
@@ -14,14 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Cash Rush project
+      - name: Extract Cash Rush v2.2.0
         run: |
           mkdir -p extracted
-          ZIP_FILE=$(find . -maxdepth 2 -type f -name '*.zip' | head -1)
-          echo "Using ZIP: $ZIP_FILE"
-          unzip -q "$ZIP_FILE" -d extracted
-          echo "Extracted:"
-          find extracted -maxdepth 3 -type f | head -80
+          unzip -q "Cash_Rush_v2.2.0_RELEASE.zip" -d extracted
+          echo "Project files:"
+          find extracted -maxdepth 3 -type f | head -100
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -32,36 +30,33 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Install Android SDK 36
         run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Fix BuildConfig and build APK
+      - name: Find Android project
         run: |
           SETTINGS_FILE=$(find extracted -type f \( -name 'settings.gradle' -o -name 'settings.gradle.kts' \) | head -1)
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
-
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project directory: $PROJECT_DIR"
 
+      - name: Enable BuildConfig
+        run: |
           APP_GRADLE="$PROJECT_DIR/app/build.gradle"
 
-          if [ -f "$APP_GRADLE" ]; then
-            echo "Enabling BuildConfig..."
-            sed -i '/^[[:space:]]*android[[:space:]]*{/a\
+          sed -i '/^[[:space:]]*android[[:space:]]*{/a\
               buildFeatures {\
                 buildConfig true\
               }' "$APP_GRADLE"
-          else
-            echo "ERROR: app/build.gradle not found"
-            exit 1
-          fi
 
-          echo "Building APK..."
+      - name: Build RELEASE AAB
+        run: |
           cd "$PROJECT_DIR"
-          gradle :app:assembleDebug --stacktrace
+          gradle :app:bundleRelease --stacktrace
 
-      - name: Upload APK
+      - name: Upload RELEASE AAB
         uses: actions/upload-artifact@v4
         with:
-          name: Cash-Rush-v2.1.2-debug-test-ads
-          path: '**/app/build/outputs/apk/debug/app-debug.apk'
+          name: Cash-Rush-v2.2.0-release-AAB
+          path: '**/app/build/outputs/bundle/release/app-release.aab'
