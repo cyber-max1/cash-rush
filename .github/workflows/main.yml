@@ -14,12 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Cash Rush project
+      - name: Extract Cash Rush projec
         run: |
-          mkdir extracted
-          Cash_Rush_v2.1.2_ADS_FIXED.zip
-          echo "Extracted files:"
-          find extracted -maxdepth 2 -type f | head -50
+            mkdir extracted
+            unzip -q Cash_Rush_v2.1.2_ADS_FIXED.zip -d extracted
+            echo "Extracted files:"
+            find extracted -maxdepth 2 -type f | head -50
 
       - name: Set up Java
         uses: actions/setup-java@v4
